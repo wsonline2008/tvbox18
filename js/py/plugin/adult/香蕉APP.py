@@ -96,7 +96,7 @@ class Spider(Spider):
     def getlist(self,data):
         vlist=[]
         for i in data:
-            if i['isvip'] !='1':
+            if i['isvip'] =='0':
                 vlist.append({
                     'vod_id': i['vodid'],
                     'vod_name': i['title'],

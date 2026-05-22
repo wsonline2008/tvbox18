@@ -3,6 +3,10 @@
 import random
 import string
 import sys
+from base64 import b64decode
+from Crypto.Cipher import AES
+from Crypto.Hash import MD5
+from Crypto.Util.Padding import unpad
 sys.path.append('..')
 from base.spider import Spider
 
@@ -27,6 +31,7 @@ class Spider(Spider):
 
     def homeContent(self, filter):
         data=self.fetch(f'{self.host}/vod/listing-0-0-0-0-0-0-0-0-0-0',headers=self.headers).json()
+        data1 = self.aes(data)
         result = {}
         classes = [{
                 'type_name': '全部',
@@ -36,13 +41,13 @@ class Spider(Spider):
         ft=[]
         filter_keys = ['orders', 'areas', 'years', 'definitions', 'durations', 'mosaics', 'langvoices']
         for key in filter_keys:
-            if key in data['data']:
+            if key in data1['data']:
                 filter_item = {
                     'key': key,
                     'name': key,
                     'value': []
                 }
-                for item in data['data'][key]:
+                for item in data1['data'][key]:
                     first_two = dict(list(item.items())[:2])
                     filter_item['value'].append({
                         'v': list(first_two.values())[0],
@@ -50,7 +55,7 @@ class Spider(Spider):
                     })
                 ft.append(filter_item)
         filters['0']=ft
-        for k in data['data']['categories']:
+        for k in data1['data']['categories']:
             classes.append({
                 'type_name': k['catename'],
                 'type_id': k['cateid']
@@ -59,7 +64,7 @@ class Spider(Spider):
 
         result['class'] = classes
         result['filters'] =filters
-        result['list'] = self.getlist(data['data']['vodrows'])
+        result['list'] = self.getlist(data1['data']['vodrows'])
         return result
 
     def homeVideoContent(self):
@@ -67,8 +72,9 @@ class Spider(Spider):
 
     def categoryContent(self, tid, pg, filter, extend):
         data=self.fetch(f'{self.host}/vod/listing-{tid}-{extend.get("areas","0")}-{extend.get("years","0")}-1-{extend.get("definitions","0")}-{extend.get("durations","0")}-{extend.get("mosaics","0")}-{extend.get("langvoices","0")}-{extend.get("orders","0")}-{pg}',headers=self.headers).json()
+        vdata=self.aes(data)
         result = {}
-        result['list'] = self.getlist(data['data']['vodrows'])
+        result['list'] = self.getlist(vdata['data']['vodrows'])
         result['page'] = pg
         result['pagecount'] = 9999
         result['limit'] = 90
@@ -77,9 +83,10 @@ class Spider(Spider):
 
     def detailContent(self, ids):
         data=self.fetch(f'{self.host}/vod/reqplay/{ids[0]}',headers=self.headers).json()
+        v = self.aes(data)
         vod = {
-            'vod_play_from': data['errmsg'],
-            'vod_play_url': '#'.join([f"{i['hdtype']}${i['httpurl']}" for i in data['data']['httpurls']]),
+            'vod_play_from': v['errmsg'],
+            'vod_play_url': '#'.join([f"{i['hdtype']}${i['httpurl']}" for i in v['data']['httpurls']]),
         }
         return {'list':[vod]}
 
@@ -93,10 +100,17 @@ class Spider(Spider):
     def localProxy(self, param):
         pass
 
+    def aes(self, word):
+        key = b64decode("SmhiR2NpT2lKSVV6STFOaQ==")
+        iv = key
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        decrypted = unpad(cipher.decrypt(b64decode(word)), AES.block_size)
+        return json.loads(decrypted.decode('utf-8'))
+
     def getlist(self,data):
         vlist=[]
         for i in data:
-            if i['isvip'] =='0':
+            if i['isvip'] !='1':
                 vlist.append({
                     'vod_id': i['vodid'],
                     'vod_name': i['title'],

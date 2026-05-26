@@ -3,10 +3,6 @@
 import random
 import string
 import sys
-from base64 import b64decode
-from Crypto.Cipher import AES
-from Crypto.Hash import MD5
-from Crypto.Util.Padding import unpad
 sys.path.append('..')
 from base.spider import Spider
 
@@ -96,13 +92,6 @@ class Spider(Spider):
 
     def localProxy(self, param):
         pass
-
-    def aes(self, word):
-        key = b64decode("SmhiR2NpT2lKSVV6STFOaQ==")
-        iv = key
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        decrypted = unpad(cipher.decrypt(b64decode(word)), AES.block_size)
-        return json.loads(decrypted.decode('utf-8'))
 
     def getlist(self,data):
         vlist=[]
